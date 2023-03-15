@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Twitter Opinion Analysis of: {{ topic }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            color: #333;
+        }
+        h1, h2 {
+            text-align: center;
+            margin: 20px 0;
+        }
+        h2 {
+            font-size: 24px;
+        }
+        img {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .button {
+            display: block;
+            margin: 20px auto;
+            width: 200px;
+            height: 50px;
+            line-height: 50px;
+            text-align: center;
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #3e8e41;
+        }
+    </style>
+</head>
+<body>
+    <h1>Twitter Opinion Analysis of: {{ topic }}</h1>
+    <h2>Top Tweets</h2>
+    {{ tweets | safe }}
+    <h2>Word Cloud</h2>
+    <img src="{{url_for('static', filename='wordcloud.png')}}" alt="Wordcloud"/>
+    <a href="{{ url_for('home') }}" class="button">New Search</a>
+</body>
+</html>
