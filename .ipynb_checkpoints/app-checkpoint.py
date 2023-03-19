@@ -58,7 +58,11 @@ def result():
     w_tweets = w_tweets.str.replace('(\#\w+.*?)',"")
     stop_words = ["https", "co", "RT", topic.lower()] + list(STOPWORDS)
     wds_tweets = re.sub(r'\b\w{1,3}\b', '', str(w_tweets))
+<<<<<<< Updated upstream
     tweets_wordcloud = WordCloud(width=700, height=400,max_font_size=40, max_words=50, background_color="white", stopwords = stop_words).generate(wds_tweets.lower())
+=======
+    tweets_wordcloud = WordCloud(width=700, height=400,max_font_size=90, max_words=40, background_color="white", stopwords = stop_words).generate(wds_tweets.lower())
+>>>>>>> Stashed changes
 
     # Save word cloud as image file
     tweets_wordcloud.to_file('static/wordcloud.png')
