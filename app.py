@@ -1,12 +1,26 @@
 from flask import Flask, render_template, request, url_for
-import pandas as pd
-import snscrape.modules.twitter as sntwitter
-from wordcloud import WordCloud
-from wordcloud import STOPWORDS
-import matplotlib.pyplot as plt
 from PIL import Image
+import pandas as pd
 import numpy as np
+import tweepy
+import warnings
+import snscrape.modules.twitter as sntwitter
+import requests
+import tensorflow as tf
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+import tweetnlp
+import seaborn as sns
+import matplotlib.pyplot as plt
+import scikitplot as skplt
+import seaborn as sns
+import contractions
 import re
+import nltk
+from nltk.corpus import stopwords
+nltk.download('punkt')
+nltk.download('stopwords')
+from nltk.tokenize import word_tokenize
 
 app = Flask(__name__)
 
@@ -50,21 +64,94 @@ def result():
         # If there are no tweets, render the error template
         return render_template('error.html', message='No tweets found')
 
-    # Get the top 10 most viewed tweets
-    tweets_df10 = tweets_df.head(10)
-    
-    # Generate word cloud
-    w_tweets = tweets_df['Text'].str.replace('(\@\w+.*?)',"")
-    w_tweets = w_tweets.str.replace('(\#\w+.*?)',"")
-    stop_words = ["https", "co", "RT", topic.lower()] + list(STOPWORDS)
-    wds_tweets = re.sub(r'\b\w{1,3}\b', '', str(w_tweets))
-    tweets_wordcloud = WordCloud(width=700, height=400,max_font_size=90, max_words=40, background_color="white", stopwords = stop_words).generate(wds_tweets.lower())
+    tweets_df['TextClean'] = tweets_df['Text']
 
-    # Save word cloud as image file
-    tweets_wordcloud.to_file('static/wordcloud.png')
+    # remove '\n', lowercase all letters
+    tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: x.replace('\n',' ').lower())
+
+    # expand contractions
+    tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: contractions.fix(x))
+
+    # remove punctuations
+    tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: re.sub(r'[^\w\s]','',x))
+
+    #remove HTML tags
+    tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: re.sub(re.compile('<.*?>'), '', x))
+
+    #remove consecutive characters that occur three or more times in a row, and replace them with just two occurrences of that character.
+    tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: re.compile(r"(.)\1{2,}").sub(r"\1\1", x))
+
+    # Removing extra spaces
+    tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: re.sub(' +',' ',x))
+
+    # Removing stop words
+    stop_words = set(stopwords.words('english'))
+    tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: ' '.join([word for word in x.split() if word not in stop_words]))
+
+    # Load the model
+    model = tweetnlp.load_model('sentiment')
+
+    # Define the sentiment analysis function
+    def get_sentiment(text):
+        return model.sentiment(text)['label']
+
+    # Apply the function to each row of the 'filtertweet[textclean]' column and store the result in a new column called 'sentiment'
+    tweets_df['Tweetsentiment'] = tweets_df['TextClean'].apply(get_sentiment)
+
+    #Sentiment Classification Plot
+    fig, ax = plt.subplots(figsize=(8,6))
+    sns.countplot(y='Tweetsentiment', data=tweets_df, color='darkblue', ax=ax)
+    ax.set_title('Sentiment Classification')
+    # Save the figure as a variable
+    SentimentClass = ax.get_figure()
+    # Or save it as an image
+    SentimentClass.savefig('static/SentimentClass.png')
+
+    #Get the overall sentiment for the period
+    OverallSentiment = tweets_df['Tweetsentiment'].mode()[0]
+
+    # Group the dataframe by date and sentiment class and count the number of tweets in each group
+    tweet_counts = tweets_df.groupby(['Datetime', 'Tweetsentiment']).size().unstack(fill_value=0)
+
+    # Plot the line graph
+    fig, ax = plt.subplots(figsize=(10, 6))
+    tweet_counts.plot(ax=ax)
+
+    # Add titles and labels
+    ax.set_title('Tweet Sentiment over Time')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Number of Tweets')
+    ax.legend(title='Sentiment Class', loc='upper left')
+    Sentimentovertime = ax.get_figure()
+    Sentimentovertime.savefig('static/Sentimentovertime.png')
+
+    # Wordcloud with Negative tweets
+    NegativeWC = plt.figure()
+    plt.title("Negative Tweets - Wordcloud")
+    plt.imshow(WordCloud(width=700, height=400,max_font_size=80, max_words=50, background_color="white", stopwords=([topic.lower()] + list(STOPWORDS))).generate(str(tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'negative'])), interpolation="bilinear")
+    plt.axis("off")
+
+    # Display the figure using plt.show()
+    plt.show()
+    NegativeWC.savefig('static/Nwordcloud.png')
+    plt.close()
+
+    PositiveWC = plt.figure()
+    plt.title("Positive Tweets - Wordcloud")
+    plt.imshow(WordCloud(width=700, height=400,max_font_size=80, max_words=50, background_color="white", stopwords=([topic.lower()] + list(STOPWORDS))).generate(str(tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'positive'])), interpolation="bilinear")
+    plt.axis("off")
+
+    # Display the figure using plt.show()
+    plt.show()
+    PositiveWC.savefig('static/Pwordcloud.png')
+    plt.close()
+
+    top_positive_tweets = tweets_df.loc[tweets_df['Tweetsentiment'] == 'positive'].sort_values(by=['Views'], ascending=False).loc[:, ['Datetime', 'Text', 'Views']].head(3)
+
+    top_negative_tweets = tweets_df.loc[tweets_df['Tweetsentiment'] == 'negative'].sort_values(by=['Views'], ascending=False).loc[:, ['Datetime', 'Text', 'Views']].head(3)
 
     # Render the results template with the DataFrame as a parameter        
-    return render_template('result.html', topic=topic, tweets=tweets_df10.to_html(index=False))
+    return render_template('result.html', topic=topic, OverallSentiment=OverallSentiment, top_positive_tweets=top_positive_tweets.to_html(index=False), top_negative_tweets=top_negative_tweets.to_html(index=False))
 
 if __name__ == '__main__':
     app.run(debug=True)
