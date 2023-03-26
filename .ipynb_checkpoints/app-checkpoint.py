@@ -21,6 +21,7 @@ from nltk.corpus import stopwords
 nltk.download('punkt')
 nltk.download('stopwords')
 from nltk.tokenize import word_tokenize
+from wordcloud import WordCloud, STOPWORDS
 
 app = Flask(__name__)
 
@@ -104,14 +105,14 @@ def result():
     ax.set_title('Sentiment Classification')
     # Save the figure as a variable
     SentimentClass = ax.get_figure()
-    # Or save it as an image
+    # save it as an image
     SentimentClass.savefig('static/SentimentClass.png')
 
     #Get the overall sentiment for the period
     OverallSentiment = tweets_df['Tweetsentiment'].mode()[0]
 
     # Group the dataframe by date and sentiment class and count the number of tweets in each group
-    tweet_counts = tweets_df.groupby(['Datetime', 'Tweetsentiment']).size().unstack(fill_value=0)
+    tweet_counts = tweets_df.groupby(['Date', 'Tweetsentiment']).size().unstack(fill_value=0)
 
     # Plot the line graph
     fig, ax = plt.subplots(figsize=(10, 6))
@@ -132,7 +133,7 @@ def result():
     plt.axis("off")
 
     # Display the figure using plt.show()
-    plt.show()
+    #plt.show()
     NegativeWC.savefig('static/Nwordcloud.png')
     plt.close()
 
@@ -142,16 +143,18 @@ def result():
     plt.axis("off")
 
     # Display the figure using plt.show()
-    plt.show()
+    #plt.show()
     PositiveWC.savefig('static/Pwordcloud.png')
     plt.close()
 
-    top_positive_tweets = tweets_df.loc[tweets_df['Tweetsentiment'] == 'positive'].sort_values(by=['Views'], ascending=False).loc[:, ['Datetime', 'Text', 'Views']].head(3)
+    top_positive_tweets = tweets_df.loc[tweets_df['Tweetsentiment'] == 'positive'].sort_values(by=['Views'], ascending=False).loc[:, ['Date', 'Text', 'Views']].head(3)
 
-    top_negative_tweets = tweets_df.loc[tweets_df['Tweetsentiment'] == 'negative'].sort_values(by=['Views'], ascending=False).loc[:, ['Datetime', 'Text', 'Views']].head(3)
+    top_negative_tweets = tweets_df.loc[tweets_df['Tweetsentiment'] == 'negative'].sort_values(by=['Views'], ascending=False).loc[:, ['Date', 'Text', 'Views']].head(3)
+    
+    location = location.title()
 
     # Render the results template with the DataFrame as a parameter        
-    return render_template('result.html', topic=topic, OverallSentiment=OverallSentiment, top_positive_tweets=top_positive_tweets.to_html(index=False), top_negative_tweets=top_negative_tweets.to_html(index=False))
+    return render_template('result.html', topic=topic, location=location, OverallSentiment=OverallSentiment, top_positive_tweets=top_positive_tweets.to_html(index=False), top_negative_tweets=top_negative_tweets.to_html(index=False))
 
 if __name__ == '__main__':
     app.run(debug=True)

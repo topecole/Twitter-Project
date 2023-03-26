@@ -8,12 +8,15 @@
             background-color: #f2f2f2;
             color: #333;
         }
-        h1, h2 {
+        h1, h2, h3 {
             text-align: center;
             margin: 20px 0;
         }
         h2 {
             font-size: 24px;
+        }
+        h3 {
+            font-size: 20px;
         }
         img {
             display: block;
@@ -40,19 +43,48 @@
         .button:hover {
             background-color: #3e8e41;
         }
+        .tweets-container {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+        }
+        .tweets-container > div {
+            flex: 1;
+            margin: 0 10px;
+        }
     </style>
 </head>
 <body>
     <h1>Twitter Opinion Analysis of: {{ topic }}</h1>
-    <h2>Top Positive Tweets</h2>
-    {{ top_positive_tweets | safe }}
-    <h2>Top Negative Tweets</h2>
-    {{ top_negative_tweets | safe }}
-    <h2>Sentiment Class</h2>
-    <img src="{{url_for('static', filename='SentimentClass.png')}}" alt="SentimentClass"/>
+    <h3>The overall sentiment from tweets in {{ location }} containing "{{ topic }}" for the period is {{ OverallSentiment }}.</h3>
+    <div class="tweets-container">
+        <div>
+            <h2>Top Positive Tweets</h2>
+            {{ top_positive_tweets | safe }}
+        </div>
+        <div>
+            <h2>Top Negative Tweets</h2>
+            {{ top_negative_tweets | safe }}
+        </div>
+    </div>
+    <h2>Sentiment Plots</h2>
+    <div class="tweets-container">
+        <div>
+            <img src="{{url_for('static', filename='SentimentClass.png')}}" alt="Sentiment Class"/>
+        </div>
+        <div>
+            <img src="{{url_for('static', filename='Sentimentovertime.png')}}" alt="Sentiments Over Time"/>
+        </div>
+    </div>
     <h2>Word Cloud</h2>
-    <img src="{{url_for('static', filename='Pwordcloud.png')}}" alt="Pwordcloud"/>
-    <img src="{{url_for('static', filename='Nwordcloud.png')}}" alt="Nwordcloud"/>
+    <div class="tweets-container">
+        <div>
+            <img src="{{url_for('static', filename='Pwordcloud.png')}}" alt="Possitve Word Cloud"/>
+        </div>
+        <div>
+            <img src="{{url_for('static', filename='Nwordcloud.png')}}" alt="Negative Word Cloud"/>
+        </div>
+    </div>
     <a href="{{ url_for('home') }}" class="button">New Search</a>
 </body>
 </html>
