@@ -51,7 +51,7 @@
 <body>
     <h1>Search for Tweets</h1>
     <form action="{{ url_for('result') }}" method="post">
-        <label for="topic">Search Criteria (Use OR where multiple words can be used):</label><br>
+        <label for="topic">Search Criteria (Seperate with a comma (,) where multiple words can be used):</label><br>
         <input type="text" id="topic" name="topic" required><br>
         <label for="location">Location:</label><br>
         <input type="text" id="location" name="location" required><br>

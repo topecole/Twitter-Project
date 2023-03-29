@@ -25,6 +25,14 @@ from wordcloud import WordCloud, STOPWORDS
 
 app = Flask(__name__)
 
+# Set cache control headers to prevent caching
+@app.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
 @app.route('/')
 def home():
     # Render the home template
@@ -43,8 +51,11 @@ def result():
         # If the user input is invalid, render the error template
         return render_template('error.html', message='Invalid input')
 
+    topic2 = topic.replace(',', " OR ")
+    topic2 = topic2.replace('  ', ' ')
+    
     # Create query for snscrape
-    query = f'({topic}) near:"{location}" lang:en until:{end_date} since:{start_date} -filter:links -filter:retweet'
+    query = f'({topic2}) near:"{location}" lang:en until:{end_date} since:{start_date} -filter:links -filter:retweet'
 
     # Create empty list to store tweets
     tweets_list = []
@@ -92,13 +103,19 @@ def result():
     # Load the model
     model = tweetnlp.load_model('sentiment')
 
-    # Define the sentiment analysis function
-    def get_sentiment(text):
-        return model.sentiment(text)['label']
+    # Define a function to apply sentiment analysis to each tweet text
+    def analyze_sentiment(text):
+        result = model.sentiment(text, return_probability=True)
+        max_prob_key = max(result['probability'], key=result['probability'].get)
+        return pd.Series({'Tweetsentiment': result['label'], 
+                          'TweetProbability': result['probability'][max_prob_key]})
 
-    # Apply the function to each row of the 'filtertweet[textclean]' column and store the result in a new column called 'sentiment'
-    tweets_df['Tweetsentiment'] = tweets_df['TextClean'].apply(get_sentiment)
-
+    # Apply the function to the 'TextClean' column and store the result in two new columns
+    tweets_df[['Tweetsentiment', 'TweetProbability']] = tweets_df['TextClean'].apply(analyze_sentiment)
+    
+    #Filter out tweets where the sentiment classification probability is less than 0.5
+    tweets_df = tweets_df.loc[tweets_df['TweetProbability'] >= 0.5]
+    
     #Sentiment Classification Plot
     fig, ax = plt.subplots(figsize=(8,6))
     sns.countplot(y='Tweetsentiment', data=tweets_df, color='darkblue', ax=ax)
@@ -126,10 +143,14 @@ def result():
     Sentimentovertime = ax.get_figure()
     Sentimentovertime.savefig('static/Sentimentovertime.png')
 
+    topic = topic.replace(',', ', ')
+    topic = topic.replace('  ', ' ')
+    topic = topic.replace('  ', ' ')
+
     # Wordcloud with Negative tweets
     NegativeWC = plt.figure()
     plt.title("Negative Tweets - Wordcloud")
-    plt.imshow(WordCloud(width=700, height=400,max_font_size=80, max_words=50, background_color="white", stopwords=([topic.lower()] + list(STOPWORDS))).generate(str(tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'negative'])), interpolation="bilinear")
+    plt.imshow(WordCloud(width=700, height=400,max_font_size=80, max_words=40, background_color="white", stopwords=((topic.lower()).split(', ') + list(STOPWORDS))).generate(str(tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'negative'])), interpolation="bilinear")
     plt.axis("off")
 
     # Display the figure using plt.show()
@@ -139,7 +160,7 @@ def result():
 
     PositiveWC = plt.figure()
     plt.title("Positive Tweets - Wordcloud")
-    plt.imshow(WordCloud(width=700, height=400,max_font_size=80, max_words=50, background_color="white", stopwords=([topic.lower()] + list(STOPWORDS))).generate(str(tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'positive'])), interpolation="bilinear")
+    plt.imshow(WordCloud(width=700, height=400,max_font_size=80, max_words=40, background_color="white", stopwords=((topic.lower()).split(', ') + list(STOPWORDS))).generate(str(tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'positive'])), interpolation="bilinear")
     plt.axis("off")
 
     # Display the figure using plt.show()
@@ -147,9 +168,9 @@ def result():
     PositiveWC.savefig('static/Pwordcloud.png')
     plt.close()
 
-    top_positive_tweets = tweets_df.loc[tweets_df['Tweetsentiment'] == 'positive'].sort_values(by=['Views'], ascending=False).loc[:, ['Date', 'Text', 'Views']].head(3)
+    top_positive_tweets = tweets_df.loc[tweets_df['Tweetsentiment'] == 'positive'].sort_values(by=['TweetProbability'], ascending=False).loc[:, ['Date', 'Text', 'Views']].head(5)
 
-    top_negative_tweets = tweets_df.loc[tweets_df['Tweetsentiment'] == 'negative'].sort_values(by=['Views'], ascending=False).loc[:, ['Date', 'Text', 'Views']].head(3)
+    top_negative_tweets = tweets_df.loc[tweets_df['Tweetsentiment'] == 'negative'].sort_values(by=['TweetProbability'], ascending=False).loc[:, ['Date', 'Text', 'Views']].head(5)
     
     location = location.title()
 
