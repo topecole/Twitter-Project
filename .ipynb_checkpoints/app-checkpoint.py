@@ -17,21 +17,12 @@ import seaborn as sns
 import contractions
 import re
 import nltk
-from nltk.corpus import stopwords
 nltk.download('punkt')
-nltk.download('stopwords')
-from nltk.tokenize import word_tokenize
+nltk.download('wordnet')
 from wordcloud import WordCloud, STOPWORDS
+from nltk.stem import WordNetLemmatizer
 
 app = Flask(__name__)
-
-# Set cache control headers to prevent caching
-@app.after_request
-def add_header(response):
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
 
 @app.route('/')
 def home():
@@ -96,10 +87,13 @@ def result():
     # Removing extra spaces
     tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: re.sub(' +',' ',x))
 
-    # Removing stop words
-    stop_words = set(stopwords.words('english'))
-    tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: ' '.join([word for word in x.split() if word not in stop_words]))
-
+    #lemmatize the tweets
+    lemmatizer = WordNetLemmatizer()
+    tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: ' '.join([lemmatizer.lemmatize(word) for word in x.split()]))
+    
+    # Removing words less than 2 characters long
+    tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: ' '.join([word for word in x.split() if len(word) > 2]))
+    
     # Load the model
     model = tweetnlp.load_model('sentiment')
 
@@ -132,7 +126,7 @@ def result():
     tweet_counts = tweets_df.groupby(['Date', 'Tweetsentiment']).size().unstack(fill_value=0)
 
     # Plot the line graph
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(8,6))
     tweet_counts.plot(ax=ax)
 
     # Add titles and labels
@@ -150,7 +144,7 @@ def result():
     # Wordcloud with Negative tweets
     NegativeWC = plt.figure()
     plt.title("Negative Tweets - Wordcloud")
-    plt.imshow(WordCloud(width=700, height=400,max_font_size=80, max_words=40, background_color="white", stopwords=((topic.lower()).split(', ') + list(STOPWORDS))).generate(str(tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'negative'])), interpolation="bilinear")
+    plt.imshow(WordCloud(width=900, height=400,max_font_size=90, max_words=40, background_color="white", stopwords=(['TextClean', 'dtype', 'Name', 'object']+(topic.lower()).split(', ') + list(STOPWORDS))).generate(str(tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'negative'])), interpolation="bilinear")
     plt.axis("off")
 
     # Display the figure using plt.show()
@@ -160,7 +154,7 @@ def result():
 
     PositiveWC = plt.figure()
     plt.title("Positive Tweets - Wordcloud")
-    plt.imshow(WordCloud(width=700, height=400,max_font_size=80, max_words=40, background_color="white", stopwords=((topic.lower()).split(', ') + list(STOPWORDS))).generate(str(tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'positive'])), interpolation="bilinear")
+    plt.imshow(WordCloud(width=900, height=400,max_font_size=90, max_words=40, background_color="white", stopwords=(['TextClean', 'dtype', 'Name', 'object']+(topic.lower()).split(', ') + list(STOPWORDS))).generate(str(tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'positive'])), interpolation="bilinear")
     plt.axis("off")
 
     # Display the figure using plt.show()
