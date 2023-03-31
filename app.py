@@ -66,8 +66,14 @@ def result():
     if tweets_df.empty:
         # If there are no tweets, render the error template
         return render_template('error.html', message='No tweets found')
+    
+    #Change date format in python pandas yyyy-mm-dd to dd-mm-yyyy
+    tweets_df['Date'] = pd.to_datetime(tweets_df['Date']).dt.strftime('%d-%m-%Y')
 
     tweets_df['TextClean'] = tweets_df['Text']
+    
+    #Remove user handles from tweets
+    tweets_df['TextClean'] = tweets_df['TextClean'].str.replace('(\@\w+.*?)',"",regex=False)
 
     # remove '\n', lowercase all letters
     tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: x.replace('\n',' ').lower())
