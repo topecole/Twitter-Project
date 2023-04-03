@@ -19,6 +19,7 @@ bokeh==3.1.0
 brotlipy==0.7.0
 cachetools==5.3.0
 certifi==2022.12.7
+cargo==0.3
 cffi==1.15.1
 chardet==5.1.0
 charset-normalizer==2.0.4
