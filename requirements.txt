@@ -62,7 +62,6 @@ pyarrow==11.0.0
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
 pyparsing==3.0.9
-pypiwin32==223
 PySocks==1.7.1
 python-dateutil==2.8.2
 pytz==2023.3
@@ -108,6 +107,5 @@ wincertstore==0.2
 wordcloud==1.8.2.2
 wrapt==1.14.1
 xxhash==3.2.0
-xyzservices==2023.2.0
 yarl==1.8.2
 zipp==3.15.0
