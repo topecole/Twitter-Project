@@ -29,6 +29,53 @@ def home():
     # Render the home template
     return render_template('home.html')
 
+def generate_wordcloud(sentiment, tweets_df, topic):
+    fig = plt.figure()
+    if sentiment == 'negative':
+        title = "Negative Tweets - Wordcloud"
+        data = tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'negative']
+        filename = 'static/Nwordcloud.png'
+    elif sentiment == 'positive':
+        title = "Positive Tweets - Wordcloud"
+        data = tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'positive']
+        filename = 'static/Pwordcloud.png'
+    else:
+        raise ValueError('Sentiment must be "positive" or "negative".')
+    
+    stopwords = ['TextClean', 'dtype', 'Name', 'object'] + (topic.lower()).split(', ') + list(STOPWORDS)
+    wordcloud = WordCloud(background_color="white", stopwords=stopwords).generate(str(data))
+    plt.imshow(wordcloud, interpolation="bilinear")
+    plt.title(title)
+    plt.axis("off")
+    fig.savefig(filename)
+    plt.close(fig)
+
+def plot_sentiment_class(tweets_df):
+    fig, ax = plt.subplots(figsize=(8,6))
+    sns.countplot(y='Tweetsentiment', data=tweets_df, color='darkblue', ax=ax)
+    ax.set_title('Sentiment Classification')
+    # Save the figure as a variable
+    SentimentClass = ax.get_figure()
+    # save it as an image
+    SentimentClass.savefig('static/SentimentClass.png')
+    plt.close(SentimentClass)
+    
+def plot_sentiment_over_time(tweet_counts):
+    # Plot the line graph
+    fig, ax = plt.subplots(figsize=(8,6))
+    tweet_counts.plot(ax=ax)
+    
+    # Add titles and labels
+    ax.set_title('Tweet Sentiment over Time')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Number of Tweets')
+    ax.legend(title='Sentiment Class', loc='upper left')
+    
+    # Save the figure and close the plot
+    Sentimentovertime = ax.get_figure()
+    Sentimentovertime.savefig('static/Sentimentovertime.png')
+    plt.close(Sentimentovertime)
+    
 @app.route('/result', methods=['POST'])
 def result():
     # Get user input from the form
@@ -117,14 +164,7 @@ def result():
     tweets_df = tweets_df.loc[tweets_df['TweetProbability'] >= 0.5]
     
     #Sentiment Classification Plot
-    fig, ax = plt.subplots(figsize=(8,6))
-    sns.countplot(y='Tweetsentiment', data=tweets_df, color='darkblue', ax=ax)
-    ax.set_title('Sentiment Classification')
-    # Save the figure as a variable
-    SentimentClass = ax.get_figure()
-    # save it as an image
-    SentimentClass.savefig('static/SentimentClass.png')
-    plt.close(SentimentClass)
+    plot_sentiment_class(tweets_df)
 
     #Get the overall sentiment for the period
     OverallSentiment = tweets_df['Tweetsentiment'].mode()[0]
@@ -139,42 +179,16 @@ def result():
     tweet_counts = tweet_counts.sort_values(by='Date')
     
     # Plot the line graph
-    fig, ax = plt.subplots(figsize=(8,6))
-    tweet_counts.plot(ax=ax)
-    
-    # Add titles and labels
-    ax.set_title('Tweet Sentiment over Time')
-    ax.set_xlabel('Date')
-    ax.set_ylabel('Number of Tweets')
-    ax.legend(title='Sentiment Class', loc='upper left')
-    Sentimentovertime = ax.get_figure()
-    Sentimentovertime.savefig('static/Sentimentovertime.png')
-    plt.close(Sentimentovertime)
+    plot_sentiment_over_time(tweet_counts)
 
     topic = topic.replace(',', ', ')
     topic = topic.replace('  ', ' ')
     topic = topic.replace('  ', ' ')
 
     # Wordcloud with Negative tweets
-    NegativeWC = plt.figure()
-    plt.title("Negative Tweets - Wordcloud")
-    plt.imshow(WordCloud(background_color="white", stopwords=(['TextClean', 'dtype', 'Name', 'object']+(topic.lower()).split(', ') + list(STOPWORDS))).generate(str(tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'negative'])), interpolation="bilinear")
-    plt.axis("off")
-    
-    # Display the figure using plt.show()
-    #plt.show()
-    NegativeWC.savefig('static/Nwordcloud.png')
-    plt.close(NegativeWC)
+    generate_wordcloud('negative', tweets_df, topic)
+    generate_wordcloud('positive', tweets_df, topic)
 
-    PositiveWC = plt.figure()
-    plt.title("Positive Tweets - Wordcloud")
-    plt.imshow(WordCloud(background_color="white", stopwords=(['TextClean', 'dtype', 'Name', 'object']+(topic.lower()).split(', ') + list(STOPWORDS))).generate(str(tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'positive'])), interpolation="bilinear")
-    plt.axis("off")
-
-    # Display the figure using plt.show()
-    #plt.show()
-    PositiveWC.savefig('static/Pwordcloud.png')
-    plt.close(PositiveWC)
 
     top_positive_tweets = tweets_df.loc[tweets_df['Tweetsentiment'] == 'positive'].sort_values(by=['TweetProbability'], ascending=False).loc[:, ['Date', 'Text', 'Views']].head(5)
 
@@ -186,7 +200,6 @@ def result():
     
     # Render the results template with the DataFrame as a parameter        
     return render_template('result.html', topic=topic, location=location, OverallSentiment=OverallSentiment, top_positive_tweets=top_positive_tweets.to_html(index=False), top_negative_tweets=top_negative_tweets.to_html(index=False))
-
     
 if __name__ == '__main__':
     app.run(debug=True)
