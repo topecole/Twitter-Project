@@ -28,53 +28,6 @@ app = Flask(__name__)
 def home():
     # Render the home template
     return render_template('home.html')
-
-def generate_wordcloud(sentiment, tweets_df, topic):
-    fig = plt.figure()
-    if sentiment == 'negative':
-        title = "Negative Tweets - Wordcloud"
-        data = tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'negative']
-        filename = 'static/Nwordcloud.png'
-    elif sentiment == 'positive':
-        title = "Positive Tweets - Wordcloud"
-        data = tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'positive']
-        filename = 'static/Pwordcloud.png'
-    else:
-        raise ValueError('Sentiment must be "positive" or "negative".')
-    
-    stopwords = ['TextClean', 'dtype', 'Name', 'object'] + (topic.lower()).split(', ') + list(STOPWORDS)
-    wordcloud = WordCloud(background_color="white", stopwords=stopwords).generate(str(data))
-    plt.imshow(wordcloud, interpolation="bilinear")
-    plt.title(title)
-    plt.axis("off")
-    fig.savefig(filename)
-    plt.close(fig)
-
-def plot_sentiment_class(tweets_df):
-    fig, ax = plt.subplots(figsize=(8,6))
-    sns.countplot(y='Tweetsentiment', data=tweets_df, color='darkblue', ax=ax)
-    ax.set_title('Sentiment Classification')
-    # Save the figure as a variable
-    SentimentClass = ax.get_figure()
-    # save it as an image
-    SentimentClass.savefig('static/SentimentClass.png')
-    plt.close(SentimentClass)
-    
-def plot_sentiment_over_time(tweet_counts):
-    # Plot the line graph
-    fig, ax = plt.subplots(figsize=(8,6))
-    tweet_counts.plot(ax=ax)
-    
-    # Add titles and labels
-    ax.set_title('Tweet Sentiment over Time')
-    ax.set_xlabel('Date')
-    ax.set_ylabel('Number of Tweets')
-    ax.legend(title='Sentiment Class', loc='upper left')
-    
-    # Save the figure and close the plot
-    Sentimentovertime = ax.get_figure()
-    Sentimentovertime.savefig('static/Sentimentovertime.png')
-    plt.close(Sentimentovertime)
     
 @app.route('/result', methods=['POST'])
 def result():
@@ -89,11 +42,12 @@ def result():
         # If the user input is invalid, render the error template
         return render_template('error.html', message='Invalid input')
 
-    topic2 = topic.replace(',', " OR ")
+    topic = '"'+topic+'"'
+    topic2 = topic.replace(', ', '" OR "')
     topic2 = topic2.replace('  ', ' ')
     
     # Create query for snscrape
-    query = f'({topic2}) near:"{location}" lang:en until:{end_date} since:{start_date} -filter:links -filter:retweet'
+    query = f'({topic2}) near:"{location}" within:10km lang:en since:{start_date} until:{end_date} -filter:links -filter:retweet'
 
     # Create empty list to store tweets
     tweets_list = []
@@ -107,7 +61,6 @@ def result():
     # Create a Pandas DataFrame from the list of tweets
     tweets_df = pd.DataFrame(tweets_list, columns=['Date', 'Text', 'Username', 'Views'])
     tweets_df['Date'] = tweets_df['Date'].dt.date
-    tweets_df =tweets_df.sort_values(by=['Views'], ascending=False)
     
     # Check if there are any tweets
     if tweets_df.empty:
@@ -163,6 +116,16 @@ def result():
     #Filter out tweets where the sentiment classification probability is less than 0.5
     tweets_df = tweets_df.loc[tweets_df['TweetProbability'] >= 0.5]
     
+    def plot_sentiment_class(tweets_df):
+        fig, ax = plt.subplots(figsize=(8,6))
+        sns.countplot(y='Tweetsentiment', data=tweets_df, color='darkblue', ax=ax)
+        ax.set_title('Sentiment Classification')
+        # Save the figure as a variable
+        SentimentClass = ax.get_figure()
+        # save it as an image
+        SentimentClass.savefig('static/SentimentClass.png')
+        plt.close(SentimentClass)
+    
     #Sentiment Classification Plot
     plot_sentiment_class(tweets_df)
 
@@ -177,6 +140,22 @@ def result():
 
     # Sort the DataFrame by the Datetime column
     tweet_counts = tweet_counts.sort_values(by='Date')
+
+    def plot_sentiment_over_time(tweet_counts):
+        # Plot the line graph
+        fig, ax = plt.subplots(figsize=(8,6))
+        tweet_counts.plot(ax=ax)
+
+        # Add titles and labels
+        ax.set_title('Tweet Sentiment over Time')
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Number of Tweets')
+        ax.legend(title='Sentiment Class', loc='upper left')
+
+        # Save the figure and close the plot
+        Sentimentovertime = ax.get_figure()
+        Sentimentovertime.savefig('static/Sentimentovertime.png')
+        plt.close(Sentimentovertime)
     
     # Plot the line graph
     plot_sentiment_over_time(tweet_counts)
@@ -185,6 +164,27 @@ def result():
     topic = topic.replace('  ', ' ')
     topic = topic.replace('  ', ' ')
 
+    def generate_wordcloud(sentiment, tweets_df, topic):
+        fig = plt.figure()
+        if sentiment == 'negative':
+            title = "Negative Tweets - Wordcloud"
+            data = tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'negative']
+            filename = 'static/Nwordcloud.png'
+        elif sentiment == 'positive':
+            title = "Positive Tweets - Wordcloud"
+            data = tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'positive']
+            filename = 'static/Pwordcloud.png'
+        else:
+            raise ValueError('Sentiment must be "positive" or "negative".')
+
+        stopwords = ['TextClean', 'dtype', 'Name', 'object'] + (topic.lower()).split(', ') + list(STOPWORDS)
+        wordcloud = WordCloud(background_color="white", stopwords=stopwords).generate(str(data))
+        plt.imshow(wordcloud, interpolation="bilinear")
+        plt.title(title)
+        plt.axis("off")
+        fig.savefig(filename)
+        plt.close(fig)
+        
     # Wordcloud with Negative tweets
     generate_wordcloud('negative', tweets_df, topic)
     generate_wordcloud('positive', tweets_df, topic)
