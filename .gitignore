@@ -35,6 +35,10 @@ MANIFEST
 *.manifest
 *.spec
 
+/.ipynb_checkpoints/
+/.vs/
+/__pycache__/
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
