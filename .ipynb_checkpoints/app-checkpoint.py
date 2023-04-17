@@ -21,6 +21,7 @@ nltk.download('punkt')
 nltk.download('wordnet')
 from wordcloud import WordCloud, STOPWORDS
 from nltk.stem import WordNetLemmatizer
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
@@ -28,6 +29,12 @@ app = Flask(__name__)
 def home():
     # Render the home template
     return render_template('home.html')
+
+def clear_variables():
+    # Clear all variables
+    for name in dir():
+        if not name.startswith('_'):
+            del globals()[name]
     
 @app.route('/result', methods=['POST'])
 def result():
@@ -42,39 +49,52 @@ def result():
         # If the user input is invalid, render the error template
         return render_template('error.html', message='Invalid input')
 
-    topic = '"'+topic+'"'
-    topic2 = topic.replace(', ', '" OR "')
+    topic2 = '"'+topic+' "'
+    topic2 = topic2.replace(', ', ' " OR "')
     topic2 = topic2.replace('  ', ' ')
     
-    # Create query for snscrape
-    query = f'({topic2}) near:"{location}" within:10km lang:en since:{start_date} until:{end_date} -filter:links -filter:retweet'
+    # Convert strings to dates
+    start_date = datetime.strptime(start_date, '%Y-%m-%d')
+    end_date = datetime.strptime(end_date, '%Y-%m-%d')
 
-    # Create empty list to store tweets
+    # Calculate period duration
+    period_duration = (end_date - start_date) / 10
+
+    # Create list of start and end dates for each period
+    period_dates = []
+    for i in range(10):
+        period_start = start_date + i * period_duration
+        period_end = period_start + period_duration - timedelta(days=1)
+        period_dates.append((period_start, period_end))
+
+    # Create query and scrape tweets for each period
     tweets_list = []
+    Qt_tweets = max_tweets / 10
+    Qt_tweets = int(Qt_tweets)
+    for period_start, period_end in period_dates:
+        query = f'{topic}) near:"{location}" within:10km lang:en since:{period_start.strftime("%Y-%m-%d")} until:{period_end.strftime("%Y-%m-%d")} -filter:links -filter:retweet'
+        for i, tweet in enumerate(sntwitter.TwitterSearchScraper(query).get_items()):
+            if i > Qt_tweets:
+                break
+            tweets_list.append([tweet.date, tweet.rawContent, tweet.user.username, tweet.viewCount])
 
-    # Use snscrape to scrape tweets
-    for i, tweet in enumerate(sntwitter.TwitterSearchScraper(query).get_items()):
-        if i > max_tweets:
-            break
-        tweets_list.append([tweet.date, tweet.rawContent, tweet.user.username, tweet.viewCount])
-        
     # Create a Pandas DataFrame from the list of tweets
     tweets_df = pd.DataFrame(tweets_list, columns=['Date', 'Text', 'Username', 'Views'])
-    tweets_df['Date'] = tweets_df['Date'].dt.date
-    
+        
     # Check if there are any tweets
     if tweets_df.empty:
         # If there are no tweets, render the error template
         return render_template('error.html', message='No tweets found')
     
     #Change date format in python pandas yyyy-mm-dd to dd-mm-yyyy
+    tweets_df['Date'] = pd.to_datetime(tweets_df['Date'], format='%Y-%m-%d')
     tweets_df['Date'] = pd.to_datetime(tweets_df['Date']).dt.strftime('%d-%m-%Y')
 
     tweets_df['TextClean'] = tweets_df['Text']
     
     #Remove user handles from tweets
-    tweets_df['TextClean'] = tweets_df['TextClean'].str.replace('(\@\w+.*?)',"",regex=False)
-
+    tweets_df['TextClean'] = tweets_df['TextClean'].str.replace('(\@\w+.*?)',"",regex=True)
+    
     # remove '\n', lowercase all letters
     tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: x.replace('\n',' ').lower())
 
@@ -114,7 +134,7 @@ def result():
     tweets_df[['Tweetsentiment', 'TweetProbability']] = tweets_df['TextClean'].apply(analyze_sentiment)
     
     #Filter out tweets where the sentiment classification probability is less than 0.5
-    tweets_df = tweets_df.loc[tweets_df['TweetProbability'] >= 0.5]
+    #tweets_df = tweets_df.loc[tweets_df['TweetProbability'] >= 0.5]
     
     def plot_sentiment_class(tweets_df):
         fig, ax = plt.subplots(figsize=(8,6))
@@ -131,9 +151,6 @@ def result():
 
     #Get the overall sentiment for the period
     OverallSentiment = tweets_df['Tweetsentiment'].mode()[0]
-
-    # Convert the Datetime column to a datetime data type
-    tweets_df['Date'] = pd.to_datetime(tweets_df['Date'], format='%d-%m-%Y')
     
     # Group the dataframe by date and sentiment class and count the number of tweets in each group
     tweet_counts = tweets_df.groupby(['Date', 'Tweetsentiment']).size().unstack(fill_value=0)
@@ -177,7 +194,7 @@ def result():
         else:
             raise ValueError('Sentiment must be "positive" or "negative".')
 
-        stopwords = ['TextClean', 'dtype', 'Name', 'object'] + (topic.lower()).split(', ') + list(STOPWORDS)
+        stopwords = ['TextClean', 'dtype', 'Name', 'object', 'Series'] + (topic.lower()).split(', ') + list(STOPWORDS)
         wordcloud = WordCloud(background_color="white", stopwords=stopwords).generate(str(data))
         plt.imshow(wordcloud, interpolation="bilinear")
         plt.title(title)
@@ -195,11 +212,25 @@ def result():
     top_negative_tweets = tweets_df.loc[tweets_df['Tweetsentiment'] == 'negative'].sort_values(by=['TweetProbability'], ascending=False).loc[:, ['Date', 'Text', 'Views']].head(5)
     
     location = location.title()
+    topic = topic.title()
+    max_tweets = "{:,}".format(max_tweets)
+    fdate = tweets_df['Date'].iloc[0]
+    ldate = tweets_df['Date'].iloc[-1]
+    maxpositive = tweet_counts['positive'].idxmax()
+    maxnegative = tweet_counts['negative'].idxmax()
+    total_tweets = len(tweets_df)
+    sentiment_counts = tweets_df['Tweetsentiment'].value_counts()
+    percent_positive = round((sentiment_counts['positive'] / total_tweets) * 100, 2)
+    percent_negative = round((sentiment_counts['negative'] / total_tweets) * 100, 2)
+    users = str(tweets_df['Username'].nunique())
     
     plt.close('all')
-    
+      
     # Render the results template with the DataFrame as a parameter        
-    return render_template('result.html', topic=topic, location=location, OverallSentiment=OverallSentiment, top_positive_tweets=top_positive_tweets.to_html(index=False), top_negative_tweets=top_negative_tweets.to_html(index=False))
-    
+    return render_template('result.html', topic=topic, Qt_tweets=Qt_tweets, location=location, OverallSentiment=OverallSentiment, fdate=fdate, ldate=ldate, max_tweets=max_tweets, maxpositive=maxpositive, maxnegative=maxnegative, users=users, percent_negative=percent_negative, percent_positive=percent_positive, top_positive_tweets=top_positive_tweets.to_html(index=False), top_negative_tweets=top_negative_tweets.to_html(index=False))
+
+# Clear variables
+clear_variables()
+
 if __name__ == '__main__':
     app.run(debug=True)

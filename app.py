@@ -134,7 +134,7 @@ def result():
     tweets_df[['Tweetsentiment', 'TweetProbability']] = tweets_df['TextClean'].apply(analyze_sentiment)
     
     #Filter out tweets where the sentiment classification probability is less than 0.5
-    tweets_df = tweets_df.loc[tweets_df['TweetProbability'] >= 0.5]
+    #tweets_df = tweets_df.loc[tweets_df['TweetProbability'] >= 0.5]
     
     def plot_sentiment_class(tweets_df):
         fig, ax = plt.subplots(figsize=(8,6))
