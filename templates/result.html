@@ -5,19 +5,23 @@
     <script src="clearCache.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: Calibri, Arial;
             background-color: #f2f2f2;
             color: #333;
         }
-        h1, h2, h3 {
+        h1, h2{
             text-align: center;
-            margin: 20px 0;
+            margin: 10px 0;
+        }
+        h1 {
+            font-weight: bold;
         }
         h2 {
             font-size: 24px;
         }
-        h3 {
-            font-size: 18px;
+        p {
+            text-align: justify ;
+            margin: 1px 10px 10px;;
         }
         img {
             display: block;
@@ -31,7 +35,7 @@
         .button {
             display: block;
             margin: 20px auto;
-            width: 200px;
+            width: 150px;
             height: 50px;
             line-height: 50px;
             text-align: center;
@@ -42,7 +46,7 @@
             cursor: pointer;
         }
         .button:hover {
-            background-color: #45a049;
+            background-color: #7745a0;
         }
         .tweets-container {
             display: flex;
@@ -79,7 +83,8 @@
 </head>
 <body>
     <h1>Twitter Opinion Analysis of Tweets about "{{ topic }}"</h1>
-    <h3>In this report, {{ max_tweets }} tweets originating from {{ location }} between the period of {{ fdate }} and {{ ldate }} containing the keyword(s) "{{ topic }}" were randomly sampled. The sampling was done by dividing the period into 10 timeslots and extracting {{ Qt_tweets }} tweets from each slot. The sample tweets were from {{ users }} distinct users and using the finetuned RoBERTa-base model integrated into TweetNLP python library, analysis of the extracted sample was conducted and further explored. The overall sentiment for the period is {{ OverallSentiment }} with positive tweets making up {{ percent_positive }}% of the sample while negative tweets made up {{ percent_negative }}%. Based on the spread of tweets, the highest number of positive tweets occurred on {{ maxpositive }} and the highest number of negative tweets occurred on {{ maxnegative }}.</h3>
+    <p>In this report, {{ max_tweets }} tweets originating from {{ location }} between the period of {{ fdate }} and {{ ldate }} containing the keyword(s) "{{ topic }}" were randomly sampled. Equal sampling accross the period was achieved by dividing the period into 10 timeslots and extracting {{ Qt_tweets }} tweets from each slot. The sample tweets were from {{ users }} distinct users and using the finetuned RoBERTa-base model integrated into TweetNLP python library, analysis of the extracted sample was conducted and further explored. The overall sentiment for the period is {{ OverallSentiment }} with positive tweets making up {{ percent_positive }}% of the sample while negative tweets made up {{ percent_negative }}%. Based on the spread of tweets, the highest number of positive tweets occurred on {{ maxpositive }} and the highest number of negative tweets occurred on {{ maxnegative }}. The tables below show the top 5 positive and negative tweets sorted according to their sentiment probability.</p>
+    <a href="data:text/csv;charset=utf-8,%EF%BB%BF{{tweets_df.to_csv(index=False)}}" download="tweets.csv">Download Tweets CSV</a>
     <div class="tweets-container">
         <div>
             <h2>Top Positive Tweets</h2>
@@ -100,6 +105,7 @@
         </div>
     </div>
     <h2>Word Cloud</h2>
+    <p>The word clouds present the frequency of words being used by users in the positive and negative sentiment groups.</p>
     <div class="tweets-container">
         <div>
             <img src="{{url_for('static', filename='Pwordcloud.png')}}" alt="Possitve Word Cloud"/>
