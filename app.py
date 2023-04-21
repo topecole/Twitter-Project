@@ -46,7 +46,7 @@ def result():
         return render_template('error.html', message='Invalid input')
     
     # Create a Pandas DataFrame from the list of tweets
-    tweets_df = pd.read_csv('TwitterExtractFull.csv',encoding= 'MacRoman')
+    tweets_df = pd.read_csv('TwitterExtractFull2.csv',encoding= 'MacRoman')
     tweets_df = tweets_df[tweets_df['Search Criteria'] == topic].copy()
     max_tweets = len(tweets_df)
     # Check if there are any tweets
@@ -55,8 +55,7 @@ def result():
         return render_template('error.html', message='No tweets found')
         
     #Change date format in python pandas yyyy-mm-dd to dd-mm-yyyy
-    tweets_df['Date'] = pd.to_datetime(tweets_df['Date'], format='%Y-%m-%d')
-    tweets_df['Date'] = pd.to_datetime(tweets_df['Date']).dt.strftime('%d-%m-%Y')
+    tweets_df['Date'] = pd.to_datetime(tweets_df['Date'])
 
     tweets_df['TextClean'] = tweets_df['Text']
     
@@ -65,8 +64,21 @@ def result():
     
     # remove '\n', lowercase all letters
     tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: x.replace('\n',' ').lower())
+      
+#     # Load the model
+#     model = tweetnlp.load_model('sentiment')
 
-    # expand contractions
+#     # Define a function to apply sentiment analysis to each tweet text
+#     def analyze_sentiment(text):
+#         result = model.sentiment(text, return_probability=True)
+#         max_prob_key = max(result['probability'], key=result['probability'].get)
+#         return pd.Series({'Tweetsentiment': result['label'], 
+#                           'TweetProbability': result['probability'][max_prob_key]})
+    
+#     # Apply the function to the 'TextClean' column and store the result in two new columns
+#     tweets_df[['Tweetsentiment', 'TweetProbability']] = tweets_df['TextClean'].apply(analyze_sentiment)
+    
+        # expand contractions
     tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: contractions.fix(x))
 
     # remove punctuations
@@ -88,19 +100,6 @@ def result():
     # Removing words less than 2 characters long
     tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: ' '.join([word for word in x.split() if len(word) > 2]))
     
-    # Load the model
-    model = tweetnlp.load_model('sentiment')
-
-    # Define a function to apply sentiment analysis to each tweet text
-    def analyze_sentiment(text):
-        result = model.sentiment(text, return_probability=True)
-        max_prob_key = max(result['probability'], key=result['probability'].get)
-        return pd.Series({'Tweetsentiment': result['label'], 
-                          'TweetProbability': result['probability'][max_prob_key]})
-
-    # Apply the function to the 'TextClean' column and store the result in two new columns
-    tweets_df[['Tweetsentiment', 'TweetProbability']] = tweets_df['TextClean'].apply(analyze_sentiment)
-    
     #Filter out tweets where the sentiment classification probability is less than 0.5
     #tweets_df = tweets_df.loc[tweets_df['TweetProbability'] >= 0.5]
     
@@ -119,9 +118,12 @@ def result():
 
     #Get the overall sentiment for the period
     OverallSentiment = tweets_df['Tweetsentiment'].mode()[0]
+
+    tweets_df = tweets_df.sort_values(by='Date', ascending=True)
     
     # Group the dataframe by date and sentiment class and count the number of tweets in each group
     tweet_counts = tweets_df.groupby(['Date', 'Tweetsentiment']).size().unstack(fill_value=0)
+
 
     # Sort the DataFrame by the Datetime column
     #tweet_counts = tweet_counts.sort_values(by='Date')
@@ -145,9 +147,9 @@ def result():
     # Plot the line graph
     plot_sentiment_over_time(tweet_counts)
 
-    topic = topic.replace(',', ', ')
-    topic = topic.replace('  ', ' ')
-    topic = topic.replace('  ', ' ')
+    # topic = topic.replace(',', ', ')
+    # topic = topic.replace('  ', ' ')
+    # topic = topic.replace('  ', ' ')
 
     def generate_wordcloud(sentiment, tweets_df, topic):
         fig = plt.figure()
@@ -162,7 +164,7 @@ def result():
         else:
             raise ValueError('Sentiment must be "positive" or "negative".')
 
-        stopwords = ['TextClean', 'dtype', 'Name', 'object', 'Series'] + (topic.lower()).split(', ') + list(STOPWORDS)
+        stopwords = [topic,'TextClean', 'dtype', 'Name', 'object', 'Series'] + (topic.lower()).split(' ') + list(STOPWORDS)
         wordcloud = WordCloud(background_color="white", stopwords=stopwords).generate(str(data))
         plt.imshow(wordcloud, interpolation="bilinear")
         plt.title(title)
@@ -201,6 +203,8 @@ def result():
 def tweets_table():
     # Render the tweets_table template
     tweets_df = pd.read_csv('tweets.csv',encoding= 'MacRoman')
+    tweets_df['Date'] = pd.to_datetime(tweets_df['Date'])
+    tweets_df = tweets_df.sort_values(by='Date', ascending=False)
     return render_template('tweets_table.html', tweets_df=tweets_df.to_html(index=False))
 
 # Clear variables
