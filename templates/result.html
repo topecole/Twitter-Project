@@ -80,11 +80,16 @@
             background-color: #ddd;
         }
     </style>
+<head>
+    <script>
+        function openNewPage() {
+            window.open("/tweets_table"); // replace "/tweets_table" with the URL of the page that displays the table
+        }
+    </script>
 </head>
 <body>
     <h1>Twitter Opinion Analysis of Tweets about "{{ topic }}"</h1>
-    <p>In this report, {{ max_tweets }} tweets originating from {{ location }} between the period of {{ fdate }} and {{ ldate }} containing the keyword(s) "{{ topic }}" were randomly sampled. Equal sampling accross the period was achieved by dividing the period into 10 timeslots and extracting {{ Qt_tweets }} tweets from each slot. The sample tweets were from {{ users }} distinct users and using the finetuned RoBERTa-base model integrated into TweetNLP python library, analysis of the extracted sample was conducted and further explored. The overall sentiment for the period is {{ OverallSentiment }} with positive tweets making up {{ percent_positive }}% of the sample while negative tweets made up {{ percent_negative }}%. Based on the spread of tweets, the highest number of positive tweets occurred on {{ maxpositive }} and the highest number of negative tweets occurred on {{ maxnegative }}. The tables below show the top 5 positive and negative tweets sorted according to their sentiment probability.</p>
-    <a href="data:text/csv;charset=utf-8,%EF%BB%BF{{tweets_df.to_csv(index=False)}}" download="tweets.csv">Download Tweets CSV</a>
+    <p>In this report, {{ max_tweets }} tweets between the period of {{ fdate }} and {{ ldate }} containing the keyword(s) "{{ topic }}" were extracted . The tweets were from {{ users }} distinct users and using the finetuned RoBERTa-base model integrated into TweetNLP python library, analysis of the extracted sample was conducted and further explored. The overall sentiment for the period is {{ OverallSentiment }} with positive tweets making up {{ percent_positive }}% of the sample while negative tweets made up {{ percent_negative }}%. Based on the spread of tweets, the highest number of positive tweets occurred on {{ maxpositive }} and the highest number of negative tweets occurred on {{ maxnegative }}. The tables below show the top 5 positive and negative tweets sorted according to their sentiment probability.</p>
     <div class="tweets-container">
         <div>
             <h2>Top Positive Tweets</h2>
@@ -114,6 +119,7 @@
             <img src="{{url_for('static', filename='Nwordcloud.png')}}" alt="Negative Word Cloud"/>
         </div>
     </div>
+    <button class="button" onclick="openNewPage()">View Tweets Table</button>
     <a href="{{ url_for('home') }}" class="button" onclick="clearCache()">New Search</a>
 </body>
-</html>
+

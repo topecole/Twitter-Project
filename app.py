@@ -4,7 +4,6 @@ import pandas as pd
 import numpy as np
 import tweepy
 import warnings
-import snscrape.modules.twitter as sntwitter
 import requests
 import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer
@@ -29,7 +28,7 @@ app = Flask(__name__)
 @app.route('/')
 def home():
     # Render the home template
-    return render_template('home.html')
+    return render_template('home2.html')
 
 def clear_variables():
     # Clear all variables
@@ -42,56 +41,19 @@ def result():
     # Get user input from the form
     try:
         topic = request.form['topic']
-        location = request.form['location']
-        start_date = request.form['start_date']
-        end_date = request.form['end_date']
-        max_tweets = int(request.form['max_tweets'])
     except:
         # If the user input is invalid, render the error template
         return render_template('error.html', message='Invalid input')
-
-    topic2 = '"'+topic+' "'
-    topic2 = topic2.replace(', ', ' " OR "')
-    topic2 = topic2.replace('  ', ' ')
     
-    # Convert strings to dates
-    start_date = datetime.strptime(start_date, '%Y-%m-%d')
-    end_date = datetime.strptime(end_date, '%Y-%m-%d')
-
-    # Calculate period duration
-    SNSlimit = max_tweets // 25
-    period_duration = (end_date - start_date) / SNSlimit
-
-    # Create list of start and end dates for each period
-    period_dates = []
-    for i in range(SNSlimit):
-        period_start = start_date + i * period_duration
-        period_end = period_start + period_duration - timedelta(days=1)
-        period_dates.append((period_start, period_end))
-
-    # Create query and scrape tweets for each period
-    tweets_list = []
-    Qt_tweets = max_tweets / SNSlimit
-    Qt_tweets = int(Qt_tweets)
-    try:
-        for period_start, period_end in period_dates:
-            query = f'{topic}) near:"{location}" within:10km lang:en since:{period_start.strftime("%Y-%m-%d")} until:{period_end.strftime("%Y-%m-%d")} -filter:links -filter:retweet'
-            for i, tweet in enumerate(sntwitter.TwitterSearchScraper(query).get_items()):
-                time.sleep(.5)
-                if i > Qt_tweets:
-                    break
-                tweets_list.append([tweet.date, tweet.rawContent, tweet.user.username, tweet.viewCount])
-
-        # Create a Pandas DataFrame from the list of tweets
-        tweets_df = pd.DataFrame(tweets_list, columns=['Date', 'Text', 'Username', 'Views'])
-
-        # Check if there are any tweets
-        if tweets_df.empty:
-            # If there are no tweets, render the error template
-            return render_template('error.html', message='No tweets found')
-    except:
-        return render_template('error.html', message='Its not you, its us. the Twitter Scaper API is currently down. Please try later')
-    
+    # Create a Pandas DataFrame from the list of tweets
+    tweets_df = pd.read_csv('TwitterExtractFull.csv',encoding= 'MacRoman')
+    tweets_df = tweets_df[tweets_df['Search Criteria'] == topic].copy()
+    max_tweets = len(tweets_df)
+    # Check if there are any tweets
+    if tweets_df.empty:
+        # If there are no tweets, render the error template
+        return render_template('error.html', message='No tweets found')
+        
     #Change date format in python pandas yyyy-mm-dd to dd-mm-yyyy
     tweets_df['Date'] = pd.to_datetime(tweets_df['Date'], format='%Y-%m-%d')
     tweets_df['Date'] = pd.to_datetime(tweets_df['Date']).dt.strftime('%d-%m-%Y')
@@ -162,7 +124,7 @@ def result():
     tweet_counts = tweets_df.groupby(['Date', 'Tweetsentiment']).size().unstack(fill_value=0)
 
     # Sort the DataFrame by the Datetime column
-    tweet_counts = tweet_counts.sort_values(by='Date')
+    #tweet_counts = tweet_counts.sort_values(by='Date')
 
     def plot_sentiment_over_time(tweet_counts):
         # Plot the line graph
@@ -216,8 +178,7 @@ def result():
     top_positive_tweets = tweets_df.loc[tweets_df['Tweetsentiment'] == 'positive'].sort_values(by=['TweetProbability'], ascending=False).loc[:, ['Date', 'Text', 'Views']].head(5)
 
     top_negative_tweets = tweets_df.loc[tweets_df['Tweetsentiment'] == 'negative'].sort_values(by=['TweetProbability'], ascending=False).loc[:, ['Date', 'Text', 'Views']].head(5)
-    
-    location = location.title()
+
     topic = topic.title()
     max_tweets = "{:,}".format(max_tweets)
     fdate = tweets_df['Date'].iloc[0]
@@ -229,11 +190,16 @@ def result():
     percent_positive = round((sentiment_counts['positive'] / total_tweets) * 100, 2)
     percent_negative = round((sentiment_counts['negative'] / total_tweets) * 100, 2)
     users = str(tweets_df['Username'].nunique())
+    tweets_df = tweets_df.drop(['Username', 'Search Criteria', 'TextClean'], axis=1)
     
     plt.close('all')
-      
+    
     # Render the results template with the DataFrame as a parameter        
-    return render_template('result.html', topic=topic, Qt_tweets=Qt_tweets, location=location, OverallSentiment=OverallSentiment, fdate=fdate, ldate=ldate, max_tweets=max_tweets, maxpositive=maxpositive, maxnegative=maxnegative, users=users, percent_negative=percent_negative, percent_positive=percent_positive, top_positive_tweets=top_positive_tweets.to_html(index=False), top_negative_tweets=top_negative_tweets.to_html(index=False))
+    return render_template('result.html', topic=topic, tweets_df=tweets_df, OverallSentiment=OverallSentiment, fdate=fdate, ldate=ldate, max_tweets=max_tweets, maxpositive=maxpositive, maxnegative=maxnegative, users=users, percent_negative=percent_negative, percent_positive=percent_positive, top_positive_tweets=top_positive_tweets.to_html(index=False), top_negative_tweets=top_negative_tweets.to_html(index=False))
+
+def tweets_table():
+    # Render the tweets_table template
+    return render_template('tweets_table.html', topic=topic, tweets_df=tweets_df, OverallSentiment=OverallSentiment, fdate=fdate, ldate=ldate, max_tweets=max_tweets, maxpositive=maxpositive, maxnegative=maxnegative, users=users, percent_negative=percent_negative, percent_positive=percent_positive, top_positive_tweets=top_positive_tweets.to_html(index=False), top_negative_tweets=top_negative_tweets.to_html(index=False))
 
 # Clear variables
 clear_variables()
