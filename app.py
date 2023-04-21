@@ -191,15 +191,17 @@ def result():
     percent_negative = round((sentiment_counts['negative'] / total_tweets) * 100, 2)
     users = str(tweets_df['Username'].nunique())
     tweets_df = tweets_df.drop(['Username', 'Search Criteria', 'TextClean'], axis=1)
-    
+    tweets_df.to_csv('tweets.csv', index=False)
     plt.close('all')
     
     # Render the results template with the DataFrame as a parameter        
     return render_template('result.html', topic=topic, tweets_df=tweets_df, OverallSentiment=OverallSentiment, fdate=fdate, ldate=ldate, max_tweets=max_tweets, maxpositive=maxpositive, maxnegative=maxnegative, users=users, percent_negative=percent_negative, percent_positive=percent_positive, top_positive_tweets=top_positive_tweets.to_html(index=False), top_negative_tweets=top_negative_tweets.to_html(index=False))
 
+@app.route('/tweets_table')
 def tweets_table():
     # Render the tweets_table template
-    return render_template('tweets_table.html', topic=topic, tweets_df=tweets_df, OverallSentiment=OverallSentiment, fdate=fdate, ldate=ldate, max_tweets=max_tweets, maxpositive=maxpositive, maxnegative=maxnegative, users=users, percent_negative=percent_negative, percent_positive=percent_positive, top_positive_tweets=top_positive_tweets.to_html(index=False), top_negative_tweets=top_negative_tweets.to_html(index=False))
+    tweets_df = pd.read_csv('tweets.csv',encoding= 'MacRoman')
+    return render_template('tweets_table.html', tweets_df=tweets_df.to_html(index=False))
 
 # Clear variables
 clear_variables()
