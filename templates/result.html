@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Twitter Opinion Analysis of: {{ topic }}</title>
+    <title>Opinion Analysis of: {{ topic }}</title>
     <script src="clearCache.js"></script>
     <style>
         body {
@@ -88,8 +88,12 @@
     </script>
 </head>
 <body>
-    <h1>Twitter Opinion Analysis of Tweets about "{{ topic }}"</h1>
-    <p>In this report, {{ max_tweets }} tweets between the period of {{ fdate }} and {{ ldate }} containing the keyword(s) "{{ topic }}" were extracted . The tweets were from {{ users }} distinct users and using the finetuned RoBERTa-base model integrated into TweetNLP python library, analysis of the extracted sample was conducted and further explored. The overall sentiment for the period is {{ OverallSentiment }} with positive tweets making up {{ percent_positive }}% of the sample while negative tweets made up {{ percent_negative }}%. Based on the spread of tweets, the highest number of positive tweets occurred on {{ maxpositive }} and the highest number of negative tweets occurred on {{ maxnegative }}. The tables below show the top 5 positive and negative tweets sorted according to their sentiment probability.</p>
+    <h1>Opinion Analysis of Tweets about "{{ topic }}"</h1>
+    <p style="white-space: pre-wrap;">In this report, we extracted a total of {{ max_tweets }} tweets between {{ fdate }} and {{ ldate }} that contain the keyword(s) "{{ topic }}". These tweets were from {{ users }} distinct users, and we conducted sentiment analysis on them using a fine-tuned RoBERTa-base model integrated into the TweetNLP Python library.
+        
+The overall sentiment for this period is {{ OverallSentiment }}, with positive tweets making up {{ percent_positive }}% of the sample and negative tweets making up {{ percent_negative }}%. We found that the highest number of positive tweets occurred on {{ maxpositive }} and the highest number of negative tweets occurred on {{ maxnegative }}.
+        
+Below, you'll find tables displaying the top 5 tweets with positive and negative sentiment, sorted by their probability score. Additionally, we have included sentiment plots detailing the sentiment count by class, sentiment count over time and word clouds that illustrate the frequency of words used in positive and negative tweets.</p>
     <div class="tweets-container">
         <div>
             <h2>Top Positive Tweets</h2>
@@ -110,7 +114,6 @@
         </div>
     </div>
     <h2>Word Cloud</h2>
-    <p>The word clouds present the frequency of words being used by users in the positive and negative sentiment groups.</p>
     <div class="tweets-container">
         <div>
             <img src="{{url_for('static', filename='Pwordcloud.png')}}" alt="Possitve Word Cloud"/>
@@ -118,6 +121,18 @@
         <div>
             <img src="{{url_for('static', filename='Nwordcloud.png')}}" alt="Negative Word Cloud"/>
         </div>
+    </div>
+    <h2>Word Count</h2>
+    <div class="tweets-container">
+        <div>
+            <h2>Top 5 most used words in Positive Sentiments</h2>
+            {{ pos_top5 | safe }}
+        </div>
+        <div>
+            <h2>Top 5 most used words in Negative Sentiments</h2>
+            {{ neg_top5 | safe }}
+        </div>
+    </div>
     </div>
     <button class="button" onclick="openNewPage()">View Tweets Table</button>
     <a href="{{ url_for('home') }}" class="button" onclick="clearCache()">New Search</a>

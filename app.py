@@ -94,11 +94,11 @@ def result():
     tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: re.sub(' +',' ',x))
 
     #lemmatize the tweets
-    lemmatizer = WordNetLemmatizer()
-    tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: ' '.join([lemmatizer.lemmatize(word) for word in x.split()]))
+    # lemmatizer = WordNetLemmatizer()
+    # tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: ' '.join([lemmatizer.lemmatize(word) for word in x.split()]))
     
     # Removing words less than 2 characters long
-    tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: ' '.join([word for word in x.split() if len(word) > 2]))
+    tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: ' '.join([word for word in x.split() if len(word) >= 2]))
     
     #Filter out tweets where the sentiment classification probability is less than 0.5
     #tweets_df = tweets_df.loc[tweets_df['TweetProbability'] >= 0.5]
@@ -152,7 +152,6 @@ def result():
     # topic = topic.replace('  ', ' ')
 
     def generate_wordcloud(sentiment, tweets_df, topic):
-        fig = plt.figure()
         if sentiment == 'negative':
             title = "Negative Tweets - Wordcloud"
             data = tweets_df['TextClean'][tweets_df['Tweetsentiment'] == 'negative']
@@ -169,13 +168,22 @@ def result():
         plt.imshow(wordcloud, interpolation="bilinear")
         plt.title(title)
         plt.axis("off")
+
+        # Get top 5 words from the wordcloud
+        word_frequencies = wordcloud.process_text(str(data))
+        word_frequencies_sorted = sorted(word_frequencies.items(), key=lambda x: x[1], reverse=True)
+        top_words = pd.DataFrame(word_frequencies_sorted[:5], columns=['Word', 'Frequency'])
+
+        fig = plt.gcf()
         fig.savefig(filename)
         plt.close(fig)
+
+        return top_words
+
         
     # Wordcloud with Negative tweets
-    generate_wordcloud('negative', tweets_df, topic)
-    generate_wordcloud('positive', tweets_df, topic)
-
+    neg_top5 = generate_wordcloud('negative', tweets_df, topic)
+    pos_top5 = generate_wordcloud('positive', tweets_df, topic)
 
     top_positive_tweets = tweets_df.loc[tweets_df['Tweetsentiment'] == 'positive'].sort_values(by=['TweetProbability'], ascending=False).loc[:, ['Date', 'Text', 'Views']].head(5)
 
@@ -197,7 +205,7 @@ def result():
     plt.close('all')
     
     # Render the results template with the DataFrame as a parameter        
-    return render_template('result.html', topic=topic, tweets_df=tweets_df, OverallSentiment=OverallSentiment, fdate=fdate, ldate=ldate, max_tweets=max_tweets, maxpositive=maxpositive, maxnegative=maxnegative, users=users, percent_negative=percent_negative, percent_positive=percent_positive, top_positive_tweets=top_positive_tweets.to_html(index=False), top_negative_tweets=top_negative_tweets.to_html(index=False))
+    return render_template('result.html', topic=topic, tweets_df=tweets_df, OverallSentiment=OverallSentiment, fdate=fdate, ldate=ldate, max_tweets=max_tweets, maxpositive=maxpositive, maxnegative=maxnegative, users=users, percent_negative=percent_negative, percent_positive=percent_positive, neg_top5=neg_top5.to_html(index=False), pos_top5=pos_top5.to_html(index=False), top_positive_tweets=top_positive_tweets.to_html(index=False), top_negative_tweets=top_negative_tweets.to_html(index=False))
 
 @app.route('/tweets_table')
 def tweets_table():
