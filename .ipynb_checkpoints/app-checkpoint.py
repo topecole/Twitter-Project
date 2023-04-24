@@ -191,10 +191,10 @@ def result():
 
     topic = topic.title()
     max_tweets = "{:,}".format(max_tweets)
-    fdate = tweets_df['Date'].iloc[0]
-    ldate = tweets_df['Date'].iloc[-1]
-    maxpositive = tweet_counts['positive'].idxmax()
-    maxnegative = tweet_counts['negative'].idxmax()
+    fdate = (tweets_df['Date'].iloc[0]).strftime('%d %B %Y')
+    ldate = (tweets_df['Date'].iloc[-1]).strftime('%d %B %Y')
+    maxpositive = (tweet_counts['positive'].idxmax()).strftime('%d %B %Y')
+    maxnegative = (tweet_counts['negative'].idxmax()).strftime('%d %B %Y')
     total_tweets = len(tweets_df)
     sentiment_counts = tweets_df['Tweetsentiment'].value_counts()
     percent_positive = round((sentiment_counts['positive'] / total_tweets) * 100, 2)
