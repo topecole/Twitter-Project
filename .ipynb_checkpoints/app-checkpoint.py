@@ -46,7 +46,7 @@ def result():
         return render_template('error.html', message='Invalid input')
     
     # Create a Pandas DataFrame from the list of tweets
-    tweets_df = pd.read_csv('TwitterExtractFull2.csv',encoding= 'MacRoman')
+    tweets_df = pd.read_csv('TwitterExtractFull.csv',encoding= 'MacRoman')
     tweets_df = tweets_df[tweets_df['Search Criteria'] == topic].copy()
     max_tweets = len(tweets_df)
     # Check if there are any tweets
@@ -65,20 +65,20 @@ def result():
     # remove '\n', lowercase all letters
     tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: x.replace('\n',' ').lower())
       
-#     # Load the model
-#     model = tweetnlp.load_model('sentiment')
+    # Load the model
+    model = tweetnlp.load_model('sentiment')
 
-#     # Define a function to apply sentiment analysis to each tweet text
-#     def analyze_sentiment(text):
-#         result = model.sentiment(text, return_probability=True)
-#         max_prob_key = max(result['probability'], key=result['probability'].get)
-#         return pd.Series({'Tweetsentiment': result['label'], 
-#                           'TweetProbability': result['probability'][max_prob_key]})
+    # Define a function to apply sentiment analysis to each tweet text
+    def analyze_sentiment(text):
+        result = model.sentiment(text, return_probability=True)
+        max_prob_key = max(result['probability'], key=result['probability'].get)
+        return pd.Series({'Tweetsentiment': result['label'], 
+                          'TweetProbability': result['probability'][max_prob_key]})
     
-#     # Apply the function to the 'TextClean' column and store the result in two new columns
-#     tweets_df[['Tweetsentiment', 'TweetProbability']] = tweets_df['TextClean'].apply(analyze_sentiment)
+    # Apply the function to the 'TextClean' column and store the result in two new columns
+    tweets_df[['Tweetsentiment', 'TweetProbability']] = tweets_df['TextClean'].apply(analyze_sentiment)
     
-        # expand contractions
+    # expand contractions
     tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: contractions.fix(x))
 
     # remove punctuations

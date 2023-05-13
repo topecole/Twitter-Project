@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, url_for
 from PIL import Image
+import snscrape.modules.twitter as sntwitter
 import pandas as pd
 import numpy as np
 import tweepy
@@ -73,7 +74,7 @@ def result():
     Qt_tweets = int(max_tweets / 10)
     try:
         for period_start, period_end in period_dates:
-            query = f'{topic}) near:"{location}" within:10km lang:en since:{period_start.strftime("%Y-%m-%d")} until:{period_end.strftime("%Y-%m-%d")} -filter:links -filter:retweet'
+            query = f'{topic}) near:"{location}" within:300km lang:en since:{period_start.strftime("%Y-%m-%d")} until:{period_end.strftime("%Y-%m-%d")} -filter:links -filter:retweet'
             for i, tweet in enumerate(sntwitter.TwitterSearchScraper(query).get_items()):
                 time.sleep(1) # add a time delay of 1 second
                 if i > Qt_tweets:
@@ -89,8 +90,8 @@ def result():
     except:
         return render_template('error.html', message='Its not you, its us. the Twitter Scraper API is currently down. Please try later')
 
-    #Change date format in python pandas yyyy-mm-dd to dd-mm-yyyy
-    tweets_df['Date'] = pd.to_datetime(tweets_df['Date']).dt.strftime('%d-%m-%Y')
+    # #Change date format in python pandas yyyy-mm-dd to dd-mm-yyyy
+    # tweets_df['Date'] = pd.to_datetime(tweets_df['Date']).dt.strftime('%d-%m-%Y')
 
     tweets_df['TextClean'] = tweets_df['Text']
 
@@ -125,8 +126,12 @@ def result():
     # Removing extra spaces
     tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: re.sub(' +',' ',x))
     
+    # # Removing stop words
+    # stop_words = set(stopwords.words('english'))
+    # tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: ' '.join([word for word in x.split() if word not in stop_words]))
+    
     # Removing words less than 2 characters long
-    tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: ' '.join([word for word in x.split() if len(word) > 2]))
+    tweets_df['TextClean'] = tweets_df['TextClean'].apply(lambda x: ' '.join([word for word in x.split() if len(word) >= 2]))
     
     #Filter out tweets where the sentiment classification probability is less than 0.5
     tweets_df = tweets_df.loc[tweets_df['TweetProbability'] > 0.5]
@@ -211,15 +216,18 @@ def result():
     # Wordcloud with Negative tweets
     neg_top5 = generate_wordcloud('negative', tweets_df, topic)
     pos_top5 = generate_wordcloud('positive', tweets_df, topic)
+    
+    tweets_df['Date'] = tweets_df['Date'].dt.date
 
     top_positive_tweets = tweets_df.loc[tweets_df['Tweetsentiment'] == 'positive'].sort_values(by=['TweetProbability'], ascending=False).loc[:, ['Date', 'Text', 'Views']].head(5)
 
     top_negative_tweets = tweets_df.loc[tweets_df['Tweetsentiment'] == 'negative'].sort_values(by=['TweetProbability'], ascending=False).loc[:, ['Date', 'Text', 'Views']].head(5)
 
     topic = topic.title()
+    location = location.title()
     max_tweets = "{:,}".format(max_tweets)
-    fdate = (tweets_df['Date'].iloc[0]).strftime('%d %B %Y')
-    ldate = (tweets_df['Date'].iloc[-1]).strftime('%d %B %Y')
+    fdate = tweets_df['Date'].iloc[0].strftime('%d %B %Y')
+    ldate = tweets_df['Date'].iloc[-1].strftime('%d %B %Y')
     maxpositive = (tweet_counts['positive'].idxmax()).strftime('%d %B %Y')
     maxnegative = (tweet_counts['negative'].idxmax()).strftime('%d %B %Y')
     total_tweets = len(tweets_df)
@@ -227,12 +235,12 @@ def result():
     percent_positive = round((sentiment_counts['positive'] / total_tweets) * 100, 2)
     percent_negative = round((sentiment_counts['negative'] / total_tweets) * 100, 2)
     users = str(tweets_df['Username'].nunique())
-    tweets_df = tweets_df.drop(['Username', 'Search Criteria', 'TextClean'], axis=1)
+    tweets_df = tweets_df.drop(['Username', 'TextClean'], axis=1)
     tweets_df.to_csv('tweets.csv', index=False)
     plt.close('all')
     
     # Render the results template with the DataFrame as a parameter        
-    return render_template('result.html', topic=topic, tweets_df=tweets_df, OverallSentiment=OverallSentiment, fdate=fdate, ldate=ldate, max_tweets=max_tweets, maxpositive=maxpositive, maxnegative=maxnegative, users=users, percent_negative=percent_negative, percent_positive=percent_positive, neg_top5=neg_top5.to_html(index=False), pos_top5=pos_top5.to_html(index=False), top_positive_tweets=top_positive_tweets.to_html(index=False), top_negative_tweets=top_negative_tweets.to_html(index=False))
+    return render_template('result.html', topic=topic, tweets_df=tweets_df, OverallSentiment=OverallSentiment, fdate=fdate, ldate=ldate, max_tweets=max_tweets, maxpositive=maxpositive, maxnegative=maxnegative, location = location, users=users, percent_negative=percent_negative, percent_positive=percent_positive, neg_top5=neg_top5.to_html(index=False), pos_top5=pos_top5.to_html(index=False), top_positive_tweets=top_positive_tweets.to_html(index=False), top_negative_tweets=top_negative_tweets.to_html(index=False))
 
 @app.route('/tweets_table')
 def tweets_table():

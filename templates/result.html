@@ -89,7 +89,7 @@
 </head>
 <body>
     <h1>Opinion Analysis of Tweets about "{{ topic }}"</h1>
-    <p style="white-space: pre-wrap;">In this report, we extracted a total of {{ max_tweets }} tweets between {{ fdate }} and {{ ldate }} that contain the keyword(s) "{{ topic }}". These tweets were from {{ users }} distinct users, and we conducted sentiment analysis on them using a fine-tuned RoBERTa-base model integrated into the TweetNLP Python library.
+    <p style="white-space: pre-wrap;">In this report, we extracted a total of {{ max_tweets }} tweets from users in {{ location }} between {{ fdate }} and {{ ldate }} that contain the keyword(s) "{{ topic }}". These tweets were from {{ users }} distinct users, and we conducted sentiment analysis on them using a fine-tuned RoBERTa-base model integrated into the TweetNLP Python library.
         
 The overall sentiment for this period is {{ OverallSentiment }}, with positive tweets making up {{ percent_positive }}% of the sample and negative tweets making up {{ percent_negative }}%. We found that the highest number of positive tweets occurred on {{ maxpositive }} and the highest number of negative tweets occurred on {{ maxnegative }}.
         
