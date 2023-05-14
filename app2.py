@@ -76,7 +76,7 @@ def result():
         for period_start, period_end in period_dates:
             query = f'{topic}) near:"{location}" within:300km lang:en since:{period_start.strftime("%Y-%m-%d")} until:{period_end.strftime("%Y-%m-%d")} -filter:links -filter:retweet'
             for i, tweet in enumerate(sntwitter.TwitterSearchScraper(query).get_items()):
-                time.sleep(.5) # add a time delay of .5 seconds
+                time.sleep(1) # add a time delay of 1 second
                 if i > Qt_tweets:
                     break
                 tweets_list.append([tweet.date, tweet.rawContent, tweet.user.username, tweet.viewCount])
@@ -225,7 +225,7 @@ def result():
 
     topic = topic.title()
     location = location.title()
-    max_tweets = len(tweets_df['max_tweets'])
+    max_tweets = len(tweets_df['Text'])
     max_tweets = "{:,}".format(max_tweets)
     fdate = tweets_df['Date'].iloc[0].strftime('%d %B %Y')
     ldate = tweets_df['Date'].iloc[-1].strftime('%d %B %Y')
