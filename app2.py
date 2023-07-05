@@ -60,23 +60,23 @@ def result():
     end_date = datetime.strptime(end_date, '%Y-%m-%d')
     
     # Calculate period duration
-    period_duration = (end_date - start_date) / 4
+    period_duration = (end_date - start_date) / 10
 
     # Create list of start and end dates for each period
     period_dates = []
-    for i in range(4):
+    for i in range(10):
         period_start = start_date + i * period_duration
         period_end = period_start + period_duration - timedelta(days=1)
         period_dates.append((period_start, period_end))
 
     # Create query and scrape tweets for each period
     tweets_list = []
-    Qt_tweets = int(max_tweets / 4)
+    Qt_tweets = int(max_tweets / 10)
     try:
         for period_start, period_end in period_dates:
             query = f'{topic}) near:"{location}" within:300km lang:en since:{period_start.strftime("%Y-%m-%d")} until:{period_end.strftime("%Y-%m-%d")} -filter:links -filter:retweet'
             for i, tweet in enumerate(sntwitter.TwitterSearchScraper(query).get_items()):
-                time.sleep(1) # add a time delay of 1 second
+                time.sleep(0.5) # add a time delay of 1 second
                 if i > Qt_tweets:
                     break
                 tweets_list.append([tweet.date, tweet.rawContent, tweet.user.username, tweet.viewCount])
